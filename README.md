@@ -55,7 +55,7 @@ Everything shows up live on a dashboard: a rolling risk-score chart, a
 transaction feed with Approved/Review/Blocked status, and an alert panel
 with the AI-generated explanations.
 
-![Live fraud detection dashboard](docs/screenshots/dashboard.png)
+![Live fraud detection dashboard](docs/screenshots/dashboard_ui.png)
 
 *The dashboard mid-demo: a velocity-fraud burst on card •7716 has just been
 flagged, complete with an AI-generated explanation, while the transaction
@@ -211,7 +211,9 @@ change, validated automatically, with zero downstream disruption.
 
 Confluent Cloud's **Stream Lineage** view shows this entire pipeline as one
 connected graph, from the Postgres CDC source through every Flink stage to
-the final dashboard consumers -- see [Screenshots](#screenshots).
+the final dashboard consumers:
+
+![Stream lineage graph](docs/screenshots/stream_lineage.png)
 
 ## Repository layout
 
@@ -269,11 +271,8 @@ the live LLM call generating the explanation.
 
 ## Screenshots
 
-The live dashboard is shown near the top of this README. Add these
-additional screenshots to `docs/screenshots/` for the submission:
+The live dashboard and stream lineage graph are shown above, inline with
+the relevant sections. Add this one more for the submission:
 
-- `stream_lineage.png` -- Confluent Cloud's Stream Lineage graph showing
-  the full pipeline, Postgres to Kafka to Flink to dashboard, as one
-  connected view
 - `schemas.png` -- the Schema Registry subjects list showing all eight
   governed topics and the `BACKWARD` compatibility mode
