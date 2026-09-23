@@ -1,127 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Fraud Detection — Live Dashboard</title>
-<style>
-  :root {
-    --bg: #0b0d12;
-    --surface: #151822;
-    --surface-2: #1c202c;
-    --border: #2a2f3d;
-    --text-primary: #e8eaf0;
-    --text-secondary: #9aa1b3;
-    --danger: #e24b4a;
-    --danger-bg: #3a1f1f;
-    --warning: #eda100;
-    --warning-bg: #3a2f14;
-    --success: #63c522;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: 2rem;
-    background: var(--bg);
-    color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  }
-  h1 {
-    font-size: 20px;
-    font-weight: 500;
-    margin: 0 0 1.5rem;
-  }
-  .metrics {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 1.5rem;
-  }
-  .metric-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem;
-  }
-  .metric-label {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin: 0 0 4px;
-  }
-  .metric-value {
-    font-size: 24px;
-    font-weight: 500;
-    margin: 0;
-  }
-  .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-  }
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--text-secondary);
-  }
-  .status-dot.connected { background: var(--success); }
-  .alert-feed {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .alert-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--danger);
-    border-radius: 8px;
-    padding: 14px 16px;
-    animation: slide-in 0.3s ease-out;
-  }
-  @keyframes slide-in {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .alert-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 6px;
-  }
-  .alert-title {
-    font-size: 14px;
-    font-weight: 500;
-  }
-  .alert-score {
-    font-size: 13px;
-    color: var(--danger);
-    background: var(--danger-bg);
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-  .alert-meta {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-  }
-  .alert-explanation {
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--text-primary);
-  }
-  .empty-state {
-    text-align: center;
-    color: var(--text-secondary);
-    padding: 3rem 0;
-    font-size: 14px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Fraud Detection — Live Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    :root {
+      --bg: #0f1621;
+      --surface: #16202e;
+      --surface-2: #1e2a3a;
+      --border: #26344a;
+      --text-primary: #e4e9f2;
+      --text-secondary: #7c8aa3;
+      --accent: #4fd1c5;
+      --accent-bg: #113332;
+      --danger: #e8917a;
+      --danger-bg: #2f2019;
+      --warning: #e3c17a;
+      --warning-bg: #2f2917;
+      --success: #7ed4a8;
+      --success-bg: #16302a;
+      --shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 2.5rem;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+    }
+    h1 { font-size: 20px; font-weight: 600; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+    .status {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-secondary); margin-bottom: 1.75rem;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #3a4a63; }
+    .status-dot.connected { background: var(--accent); }
+
+    .metrics {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px; margin-bottom: 1.5rem;
+    }
+    .metric-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.1rem 1.25rem; box-shadow: var(--shadow);
+    }
+    .metric-label { font-size: 12.5px; color: var(--text-secondary); margin: 0 0 6px; font-weight: 500; }
+    .metric-value { font-size: 26px; font-weight: 600; margin: 0; letter-spacing: -0.02em; color: var(--text-primary); }
+    .metric-value.accent-danger { color: var(--danger); }
+    .metric-value.accent-teal { color: var(--accent); }
+
+    .main-grid {
+      display: grid; grid-template-columns: 1.3fr 1fr; gap: 14px; margin-bottom: 1.5rem;
+    }
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem; box-shadow: var(--shadow);
+    }
+    .panel-title {
+      font-size: 13px; color: var(--text-secondary); margin: 0 0 14px; font-weight: 500;
+    }
+    .chart-wrap { position: relative; height: 220px; }
+
+    .alert-feed { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+    .alert-card {
+      background: var(--danger-bg); border: 1px solid #3d2a20; border-radius: 10px; padding: 12px 14px;
+      animation: slide-in 0.35s ease-out;
+    }
+    @keyframes slide-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    .alert-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    .alert-title { font-size: 13px; font-weight: 600; color: var(--danger); }
+    .alert-score {
+      font-size: 12px; font-weight: 600; color: var(--danger);
+      background: rgba(0,0,0,0.2); padding: 1px 8px; border-radius: 20px;
+    }
+    .alert-meta { font-size: 12px; color: #b9917f; margin-bottom: 6px; }
+    .alert-explanation { font-size: 12.5px; line-height: 1.55; color: var(--text-primary); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; color: var(--text-secondary); font-weight: 500;
+      padding: 8px; font-size: 12px; border-bottom: 1px solid var(--border);
+    }
+    td { padding: 9px 8px; border-bottom: 1px solid var(--surface-2); color: var(--text-primary); }
+    tr:last-child td { border-bottom: none; }
+    .badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .badge-approved { background: var(--success-bg); color: var(--success); }
+    .badge-review { background: var(--warning-bg); color: var(--warning); }
+    .badge-blocked { background: var(--danger-bg); color: var(--danger); }
+
+    .empty-state { text-align: center; color: var(--text-secondary); padding: 2.5rem 0; font-size: 13px; line-height: 1.8; }
+    code {
+      background: var(--accent-bg); color: var(--accent);
+      padding: 3px 8px; border-radius: 6px; font-size: 12px;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Real-time fraud detection — live alert feed</h1>
+<h1>Real-time fraud detection</h1>
 <div class="status">
   <span class="status-dot" id="statusDot"></span>
   <span id="statusText">Connecting...</span>
@@ -129,93 +108,182 @@
 
 <div class="metrics">
   <div class="metric-card">
-    <p class="metric-label">Alerts received</p>
-    <p class="metric-value" id="alertCount">0</p>
+    <p class="metric-label">Transactions seen</p>
+    <p class="metric-value" id="txCount">0</p>
   </div>
   <div class="metric-card">
-    <p class="metric-label">Avg risk score</p>
-    <p class="metric-value" id="avgScore">--</p>
+    <p class="metric-label">Alerts flagged</p>
+    <p class="metric-value accent-danger" id="alertCount">0</p>
   </div>
   <div class="metric-card">
-    <p class="metric-label">Highest score</p>
-    <p class="metric-value" id="maxScore">--</p>
+    <p class="metric-label">Avg alert risk</p>
+    <p class="metric-value accent-teal" id="avgScore">--</p>
   </div>
   <div class="metric-card">
     <p class="metric-label">Last alert</p>
-    <p class="metric-value" id="lastAlertTime" style="font-size: 16px;">--</p>
+    <p class="metric-value" id="lastAlertTime" style="font-size: 17px;">--</p>
   </div>
 </div>
 
-<div class="alert-feed" id="alertFeed">
-  <div class="empty-state" id="emptyState">Waiting for fraud alerts... try triggering one with:<br>
-    <code>curl -X POST http://localhost:8080/api/demo/inject/velocity</code>
+<div class="main-grid">
+  <div class="panel">
+    <p class="panel-title">Risk score stream</p>
+    <div class="chart-wrap">
+      <canvas id="riskChart" role="img" aria-label="Line chart of transaction risk scores over time"></canvas>
+    </div>
   </div>
+  <div class="panel">
+    <p class="panel-title">Live fraud alerts</p>
+    <div class="alert-feed" id="alertFeed">
+      <div class="empty-state" id="emptyAlertState">
+        Waiting for alerts...<br><br>
+        <code>curl -X POST http://localhost:8080/api/demo/inject/velocity</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <p class="panel-title">Transaction stream</p>
+  <table>
+    <thead>
+    <tr><th>Time</th><th>Card</th><th>Amount</th><th>Merchant</th><th>Status</th></tr>
+    </thead>
+    <tbody id="txTableBody"></tbody>
+  </table>
+  <div class="empty-state" id="emptyTxState">Waiting for transactions...</div>
 </div>
 
 <script>
-  const feed = document.getElementById('alertFeed');
-  const emptyState = document.getElementById('emptyState');
+  const alertFeed = document.getElementById('alertFeed');
+  const emptyAlertState = document.getElementById('emptyAlertState');
+  const txTableBody = document.getElementById('txTableBody');
+  const emptyTxState = document.getElementById('emptyTxState');
   const statusDot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
+  const txCountEl = document.getElementById('txCount');
   const alertCountEl = document.getElementById('alertCount');
   const avgScoreEl = document.getElementById('avgScore');
-  const maxScoreEl = document.getElementById('maxScore');
   const lastAlertTimeEl = document.getElementById('lastAlertTime');
 
+  let txCount = 0;
   let alertCount = 0;
-  let scoreSum = 0;
-  let maxScore = 0;
+  let alertScoreSum = 0;
 
-  const source = new EventSource('/api/dashboard/stream');
+  const maxPoints = 30;
+  const chartLabels = [];
+  const chartData = [];
 
-  source.onopen = () => {
-    statusDot.classList.add('connected');
-    statusText.textContent = 'Connected — waiting for alerts';
-  };
-
-  source.onerror = () => {
-    statusDot.classList.remove('connected');
-    statusText.textContent = 'Disconnected — retrying...';
-  };
-
-  source.addEventListener('fraud-alert', (event) => {
-    const alert = JSON.parse(event.data);
-    if (emptyState) emptyState.remove();
-
-    alertCount++;
-    scoreSum += alert.riskScore;
-    maxScore = Math.max(maxScore, alert.riskScore);
-
-    alertCountEl.textContent = alertCount;
-    avgScoreEl.textContent = Math.round(scoreSum / alertCount);
-    maxScoreEl.textContent = maxScore;
-    lastAlertTimeEl.textContent = new Date().toLocaleTimeString();
-
-    const card = document.createElement('div');
-    card.className = 'alert-card';
-    card.innerHTML = `
-      <div class="alert-header">
-        <span class="alert-title">Card •${escapeHtml(alert.cardId)} — ${escapeHtml(alert.reasonCode)}</span>
-        <span class="alert-score">Risk ${alert.riskScore}</span>
-      </div>
-      <div class="alert-meta">
-        $${alert.amount.toFixed(2)} at ${escapeHtml(alert.merchant)} · ${escapeHtml(alert.customerId)}
-      </div>
-      <div class="alert-explanation">${escapeHtml(alert.aiExplanation || '')}</div>
-    `;
-    feed.prepend(card);
-
-    // Keep the feed from growing unbounded during a long demo.
-    while (feed.children.length > 50) {
-      feed.removeChild(feed.lastChild);
+  const riskChart = new Chart(document.getElementById('riskChart'), {
+    type: 'line',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        data: chartData,
+        borderColor: '#4fd1c5',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: true,
+        backgroundColor: 'rgba(79,209,197,0.08)',
+        tension: 0.35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: {
+          min: 0, max: 100,
+          grid: { color: '#26344a' },
+          ticks: { color: '#7c8aa3', font: { size: 11 } }
+        }
+      }
     }
   });
+
+  function pushChartPoint(score) {
+    chartLabels.push('');
+    chartData.push(score);
+    if (chartData.length > maxPoints) {
+      chartLabels.shift();
+      chartData.shift();
+    }
+    riskChart.update();
+  }
+
+  function statusBadge(score) {
+    if (score > 70) return '<span class="badge badge-blocked">Blocked</span>';
+    if (score >= 40) return '<span class="badge badge-review">Review</span>';
+    return '<span class="badge badge-approved">Approved</span>';
+  }
 
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
   }
+
+  const source = new EventSource('/api/dashboard/stream');
+
+  source.onopen = () => {
+    statusDot.classList.add('connected');
+    statusText.textContent = 'Connected — live';
+  };
+  source.onerror = () => {
+    statusDot.classList.remove('connected');
+    statusText.textContent = 'Disconnected — retrying...';
+  };
+
+  source.addEventListener('transaction', (event) => {
+    const tx = JSON.parse(event.data);
+    if (emptyTxState) emptyTxState.remove();
+
+    txCount++;
+    txCountEl.textContent = txCount;
+    pushChartPoint(tx.riskScore);
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${new Date().toLocaleTimeString()}</td>
+      <td>&bull;${escapeHtml(tx.cardId)}</td>
+      <td>$${tx.amount.toFixed(2)}</td>
+      <td>${escapeHtml(tx.merchant || '')}</td>
+      <td>${statusBadge(tx.riskScore)}</td>
+    `;
+    txTableBody.prepend(row);
+    while (txTableBody.children.length > 20) {
+      txTableBody.removeChild(txTableBody.lastChild);
+    }
+  });
+
+  source.addEventListener('fraud-alert', (event) => {
+    const alert = JSON.parse(event.data);
+    if (emptyAlertState) emptyAlertState.remove();
+
+    alertCount++;
+    alertScoreSum += alert.riskScore;
+    alertCountEl.textContent = alertCount;
+    avgScoreEl.textContent = Math.round(alertScoreSum / alertCount);
+    lastAlertTimeEl.textContent = new Date().toLocaleTimeString();
+
+    const card = document.createElement('div');
+    card.className = 'alert-card';
+    card.innerHTML = `
+      <div class="alert-header">
+        <span class="alert-title">&bull;${escapeHtml(alert.cardId)} — ${escapeHtml(alert.reasonCode)}</span>
+        <span class="alert-score">${alert.riskScore}</span>
+      </div>
+      <div class="alert-meta">$${alert.amount.toFixed(2)} at ${escapeHtml(alert.merchant)}</div>
+      <div class="alert-explanation">${escapeHtml(alert.aiExplanation || '')}</div>
+    `;
+    alertFeed.prepend(card);
+    while (alertFeed.children.length > 20) {
+      alertFeed.removeChild(alertFeed.lastChild);
+    }
+  });
 </script>
 
 </body>

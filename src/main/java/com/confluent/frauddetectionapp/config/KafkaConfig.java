@@ -19,7 +19,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Explicit, typed Kafka beans for the Transaction Avro type.
+ * Explicit, typed Kafka beans for the Transaction Avro type, plus a
+ * GenericRecord-based consumer factory for reading topics (like
+ * fraud_alerts_explained) that were created directly in Flink SQL
+ * rather than from a compiled Avro class in this project.
  *
  * Spring Boot autoconfigures a generic KafkaTemplate from
  * application.properties, but declaring this bean explicitly means
@@ -51,13 +54,20 @@ public class KafkaConfig {
     }
 
     // GenericRecord consumer factory: for topics created in Flink SQL
-    // (fraud_alerts_explained) that don't have a compiled Java class.
+    // (fraud_alerts_explained, scored_transactions) that don't have a
+    // compiled Java class. Used only by the dashboard's consumers, so
+    // auto.offset.reset is forced to 'latest' here -- overriding the
+    // 'earliest' default in application.properties -- meaning the
+    // dashboard only ever shows alerts/transactions from the moment
+    // it starts, not a replay of everything ever produced during
+    // earlier testing.
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, GenericRecord> genericRecordListenerFactory() {
         Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties());
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroDeserializer.class);
         props.put("specific.avro.reader", false); // GenericRecord, not a compiled class
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
         var factory = new ConcurrentKafkaListenerContainerFactory<String, GenericRecord>();
         factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(props));

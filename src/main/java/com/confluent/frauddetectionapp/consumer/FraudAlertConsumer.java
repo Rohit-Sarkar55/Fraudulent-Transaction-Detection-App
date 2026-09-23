@@ -1,6 +1,5 @@
 package com.confluent.frauddetectionapp.consumer;
 
-
 import com.confluent.frauddetectionapp.service.AlertBroadcaster;
 import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
@@ -30,7 +29,7 @@ public class FraudAlertConsumer {
 
     @KafkaListener(
             topics = "${app.kafka.topics.fraud-alerts-explained}",
-            groupId = "fraud-dashboard",
+            groupId = "fraud-dashboard-v2",
             containerFactory = "genericRecordListenerFactory"
     )
     public void onAlert(GenericRecord record) {

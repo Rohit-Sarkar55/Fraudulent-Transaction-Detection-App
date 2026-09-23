@@ -48,11 +48,11 @@ public class TransactionProducer {
         this.injectionRate = injectionRate;
     }
 
-    /** Runs continuously: ~10 transactions/hour (one every 6 minutes), mostly normal.
+    /** Runs continuously: ~6 transactions/minute (one every 10 seconds), mostly normal.
      * Kept slow so the topic doesn't flood during a demo -- use the
      * manual injection endpoints (FraudInjectionController) to force
      * activity on demand instead of waiting on this background rate. */
-    @Scheduled(fixedRate = 360000)
+    @Scheduled(fixedRate = 10000)
     public void generateTransaction() {
         double roll = ThreadLocalRandom.current().nextDouble();
         if (roll < injectionRate / 3) {

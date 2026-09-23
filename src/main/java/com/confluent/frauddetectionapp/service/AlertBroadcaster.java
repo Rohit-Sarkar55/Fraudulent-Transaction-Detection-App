@@ -1,6 +1,5 @@
 package com.confluent.frauddetectionapp.service;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -48,9 +47,25 @@ public class AlertBroadcaster {
     }
 
     public void broadcast(Alert alert) {
+        broadcast("fraud-alert", alert);
+    }
+
+    public record ScoredTransaction(
+            String transactionId,
+            String cardId,
+            double amount,
+            String merchant,
+            int riskScore) {
+    }
+
+    public void broadcastTransaction(ScoredTransaction transaction) {
+        broadcast("transaction", transaction);
+    }
+
+    private void broadcast(String eventName, Object data) {
         for (SseEmitter emitter : emitters) {
             try {
-                emitter.send(SseEmitter.event().name("fraud-alert").data(alert));
+                emitter.send(SseEmitter.event().name(eventName).data(data));
             } catch (IOException e) {
                 emitters.remove(emitter);
             }
