@@ -24,7 +24,6 @@ surfaced on a live dashboard the moment they're flagged.
 - [Setup](#setup)
 - [Running the demo](#running-the-demo)
 - [Screenshots](#screenshots)
-- [Cleanup](#cleanup)
 
 ---
 
