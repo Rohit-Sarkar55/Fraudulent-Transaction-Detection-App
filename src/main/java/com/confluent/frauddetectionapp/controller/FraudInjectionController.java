@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -14,7 +15,10 @@ import java.util.Map;
  *
  * POST /api/demo/inject/velocity
  * POST /api/demo/inject/geo
- * POST /api/demo/inject/amount
+ *
+ * The response includes the transaction_id(s) just created, so you can
+ * paste one straight into Confluent Cloud's topic message search box
+ * to trace it through the pipeline, without digging through app logs.
  */
 @RestController
 public class FraudInjectionController {
@@ -26,14 +30,20 @@ public class FraudInjectionController {
     }
 
     @PostMapping("/api/demo/inject/{pattern}")
-    public Map<String, String> inject(@PathVariable String pattern) {
-        switch (pattern) {
+    public Map<String, Object> inject(@PathVariable String pattern) {
+        List<String> transactionIds = switch (pattern) {
             case "velocity" -> producer.injectVelocityBurst();
             case "geo" -> producer.injectGeoMismatch();
-            default -> {
-                return Map.of("status", "unknown pattern, use 'velocity' or 'geo'");
-            }
+            default -> null;
+        };
+
+        if (transactionIds == null) {
+            return Map.of("status", "unknown pattern, use 'velocity' or 'geo'");
         }
-        return Map.of("status", "injected", "pattern", pattern);
+        return Map.of(
+                "status", "injected",
+                "pattern", pattern,
+                "transactionIds", transactionIds
+        );
     }
 }

@@ -11,6 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -71,23 +73,33 @@ public class TransactionProducer {
     // ---- fraud patterns ----
 
     /** Same card, several transactions in rapid succession -> velocity check in Flink. */
-    public void injectVelocityBurst() {
+    public List<String> injectVelocityBurst() {
         CardPool.Card card = cardPool.random();
         int burstSize = 5 + ThreadLocalRandom.current().nextInt(3); // 5-7 rapid txns
         log.info("Injecting velocity burst: card={} count={}", card.cardId(), burstSize);
+        List<String> ids = new ArrayList<>();
         for (int i = 0; i < burstSize; i++) {
             double amount = round2(15 + ThreadLocalRandom.current().nextDouble() * 60);
-            send(build(card, amount, card.homeLat(), card.homeLon()));
+            Transaction transaction = build(card, amount, card.homeLat(), card.homeLon());
+            ids.add(transaction.getTransactionId());
+            send(transaction);
         }
+        return ids;
     }
 
     /** Same card, a location far from home right after a normal one -> impossible travel. */
-    public void injectGeoMismatch() {
+    public List<String> injectGeoMismatch() {
         CardPool.Card card = cardPool.random();
         double[] farLocation = cardPool.farAwayLocation(card);
         log.info("Injecting geo-mismatch: card={} homeCity={}", card.cardId(), card.homeCity());
-        send(buildNormalTransaction(card));
-        send(build(card, round2(card.avgSpend()), farLocation[0], farLocation[1]));
+        List<String> ids = new ArrayList<>();
+        Transaction normal = buildNormalTransaction(card);
+        ids.add(normal.getTransactionId());
+        send(normal);
+        Transaction farAway = build(card, round2(card.avgSpend()), farLocation[0], farLocation[1]);
+        ids.add(farAway.getTransactionId());
+        send(farAway);
+        return ids;
     }
 
     /** One transaction far above the card's normal spend -> amount anomaly. */
@@ -113,6 +125,8 @@ public class TransactionProducer {
     }
 
     private void send(Transaction transaction) {
+        log.info("Sending transaction_id={} card={} amount={}",
+                transaction.getTransactionId(), transaction.getCardId(), transaction.getAmount());
         kafkaTemplate.send(topics.transactions(), transaction.getCardId(), transaction)
                 .whenComplete((result, ex) -> {
                     if (ex != null) {
