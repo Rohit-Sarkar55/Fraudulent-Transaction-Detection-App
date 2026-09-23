@@ -134,6 +134,11 @@ home location, average spend, risk tier -- into Kafka in real time. This is
 what keeps the fraud-scoring pipeline's customer context current without
 any polling or batch refresh.
 
+The full pipeline runs across **8 topics and 43 partitions** on a single
+Confluent Cloud cluster:
+
+![Kafka topics overview](docs/screenshots/topics_overview.png)
+
 ### Stream processing (Flink)
 
 Five chained Flink SQL jobs, each reading from the previous stage's output
@@ -156,6 +161,17 @@ topic:
 4. **`fraud_alerts`** -- filters to `risk_score > 70`.
 5. **`fraud_alerts_ai_ready`** -- a parallel, profile-free filter used
    specifically to feed the AI step (see below).
+
+Every stage runs as a **continuous streaming statement** on a shared Flink
+compute pool -- these never "finish," they process new events forever:
+
+![Flink compute pool metrics](docs/screenshots/flink_compute_pool.png)
+
+The topic-level lineage view shows exactly how one topic fans out to its
+consumers -- here, `transactions` feeding both the `enriched_transactions`
+join and the dashboard's transaction feed directly:
+
+![Transactions topic lineage](docs/screenshots/transactions_topic_lineage.png)
 
 ### AI/ML function
 
@@ -189,7 +205,9 @@ building this.
 
 **Schema Registry** enforces an Avro schema on every topic in this
 pipeline -- eight subjects total, each independently versioned, visible in
-Confluent Cloud's **Schemas** page with compatibility mode `BACKWARD`.
+Confluent Cloud's **Schemas** page with compatibility mode `BACKWARD`:
+
+![Schema Registry overview](docs/screenshots/schema_registry_overview.png)
 
 The `transactions` schema was evolved **live**, mid-build, to add a new
 `device_id` field:
@@ -213,6 +231,12 @@ connected graph, from the Postgres CDC source through every Flink stage to
 the final dashboard consumers:
 
 ![Stream lineage graph](docs/screenshots/stream_lineage.png)
+
+Zoomed out to the cluster level, the same view shows the full picture --
+one producer, every intermediate Flink-created topic, and two dashboard
+consumer groups reading the final output:
+
+![Cluster-level stream lineage](docs/screenshots/cluster_lineage.png)
 
 ## Repository layout
 
@@ -270,8 +294,15 @@ the live LLM call generating the explanation.
 
 ## Screenshots
 
-The live dashboard and stream lineage graph are shown above, inline with
-the relevant sections. Add this one more for the submission:
+All screenshots are embedded inline above, alongside the sections they
+support:
 
-- `schemas.png` -- the Schema Registry subjects list showing all eight
-  governed topics and the `BACKWARD` compatibility mode
+| File | Shows |
+|---|---|
+| `dashboard_ui.png` | The live dashboard mid-alert |
+| `topics_overview.png` | All 8 Kafka topics in the pipeline |
+| `transactions_topic_lineage.png` | One topic's producer/consumer fan-out |
+| `flink_compute_pool.png` | The Flink compute pool running all 5+ streaming jobs |
+| `schema_registry_overview.png` | Schema Registry, compatibility mode, all subjects |
+| `stream_lineage.png` | Full pipeline lineage graph |
+| `cluster_lineage.png` | Cluster-level view of every topic and consumer |
