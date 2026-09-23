@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "Transaction",
+  "namespace": "com.devday.frauddetect.avro",
+  "doc": "A single card transaction, produced onto the 'transactions' topic.",
+  "fields": [
+    { "name": "transaction_id", "type": "string", "doc": "Unique ID for this transaction." },
+    { "name": "card_id", "type": "string", "doc": "Masked/tokenized card identifier, e.g. '4471'." },
+    { "name": "customer_id", "type": "string", "doc": "Joins against customer_profiles for enrichment." },
+    { "name": "amount", "type": "double", "doc": "Transaction amount in USD." },
+    { "name": "merchant", "type": "string" },
+    { "name": "lat", "type": "double", "doc": "Latitude where the transaction occurred." },
+    { "name": "lon", "type": "double", "doc": "Longitude where the transaction occurred." },
+    {
+      "name": "timestamp",
+      "type": { "type": "long", "logicalType": "timestamp-millis" },
+      "doc": "Event time, epoch millis."
+    }
+  ]
+}
