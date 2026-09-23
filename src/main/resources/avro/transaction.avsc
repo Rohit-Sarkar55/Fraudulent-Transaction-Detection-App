@@ -15,6 +15,12 @@
       "name": "timestamp",
       "type": { "type": "long", "logicalType": "timestamp-millis" },
       "doc": "Event time, epoch millis."
+    },
+    {
+      "name": "device_id",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Device fingerprint, added in schema v2. Optional with a null default so this is a backward-compatible change -- existing consumers reading old messages (which have no device_id at all) simply see null, and don't break."
     }
   ]
 }

@@ -121,6 +121,7 @@ public class TransactionProducer {
                 .setLat(lat)
                 .setLon(lon)
                 .setTimestamp(Instant.now())
+                .setDeviceId("device-" + UUID.randomUUID().toString().substring(0, 8))
                 .build();
     }
 

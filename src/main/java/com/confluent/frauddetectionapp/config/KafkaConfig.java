@@ -1,14 +1,19 @@
 package com.confluent.frauddetectionapp.config;
 
+import com.devday.frauddetect.avro.Transaction;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
-import com.devday.frauddetect.avro.Transaction;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,11 +47,25 @@ public class KafkaConfig {
 
     @Bean
     public KafkaTemplate<String, Transaction> transactionKafkaTemplate() {
-
         return new KafkaTemplate<>(transactionProducerFactory());
     }
 
+    // GenericRecord consumer factory: for topics created in Flink SQL
+    // (fraud_alerts_explained) that don't have a compiled Java class.
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, GenericRecord> genericRecordListenerFactory() {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroDeserializer.class);
+        props.put("specific.avro.reader", false); // GenericRecord, not a compiled class
 
+        var factory = new ConcurrentKafkaListenerContainerFactory<String, GenericRecord>();
+        factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(props));
+        return factory;
+    }
+
+    // Topic names, injected from application.properties so they're not
+    // hardcoded across the codebase.
     @Bean
     public KafkaTopics kafkaTopics(
             @Value("${app.kafka.topics.transactions}") String transactions,
