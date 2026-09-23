@@ -6,7 +6,8 @@ Synthetic card transactions stream through Kafka, get enriched with customer
 profile data captured live via CDC from Postgres, are scored for fraud risk
 by Apache Flink using three independent detection signals, explained in
 plain English by an LLM called directly from the Flink SQL pipeline, and
-surfaced on a live dashboard the moment they're flagged.
+surfaced on a live dashboard the moment they're flagged -- with every
+AI-explained alert also landing in a Postgres table via a sink connector.
 
 ---
 
@@ -16,10 +17,10 @@ surfaced on a live dashboard the moment they're flagged.
 - [Why it matters](#why-it-matters)
 - [Architecture](#architecture)
 - [Confluent technology used](#confluent-technology-used)
-    - [Connector](#connector)
-    - [Stream processing (Flink)](#stream-processing-flink)
-    - [AI/ML function](#aiml-function)
-    - [Stream governance](#stream-governance)
+   - [Connectors](#connectors)
+   - [Stream processing (Flink)](#stream-processing-flink)
+   - [AI/ML function](#aiml-function)
+   - [Stream governance](#stream-governance)
 - [Repository layout](#repository-layout)
 - [Setup](#setup)
 - [Running the demo](#running-the-demo)
@@ -52,7 +53,10 @@ two minutes, a pattern consistent with card-testing fraud."*
 
 Everything shows up live on a dashboard: a rolling risk-score chart, a
 transaction feed with Approved/Review/Blocked status, and an alert panel
-with the AI-generated explanations.
+with the AI-generated explanations. In parallel, a **Postgres Sink
+Connector** writes every AI-explained alert into a `fraud_cases` table --
+so the alert trail persists outside Kafka too, exactly like a real fraud
+team's case-management system would expect.
 
 ![Live fraud detection dashboard](docs/screenshots/dashboard_ui.png)
 
@@ -122,17 +126,34 @@ Postgres customer_profiles (home city, avg spend, risk tier)    |
                           Server-Sent Events -> dashboard.html
                           (live risk chart, transaction table,
                            alert feed)
+
+                    (in parallel, straight from fraud_alerts_explained)
+                                        |
+                                        v
+                          PostgreSQL Sink Connector
+                          (Confluent Cloud managed, writes every
+                           AI-explained alert into Postgres: fraud_cases)
 ```
 
 ## Confluent technology used
 
-### Connector
+### Connectors
 
-**Postgres CDC Source Connector** (Debezium-based, fully managed by
-Confluent Cloud) streams every change to the `customer_profiles` table --
-home location, average spend, risk tier -- into Kafka in real time. This is
-what keeps the fraud-scoring pipeline's customer context current without
-any polling or batch refresh.
+This app uses Confluent Cloud managed connectors in **both directions** --
+a source connector bringing external data in, and a sink connector pushing
+processed results back out.
+
+**Postgres CDC Source Connector** (Debezium-based) streams every change to
+the `customer_profiles` table -- home location, average spend, risk tier --
+into Kafka in real time. This is what keeps the fraud-scoring pipeline's
+customer context current without any polling or batch refresh.
+
+**Postgres Sink Connector** (JDBC-based) reads every row from
+`fraud_alerts_explained` -- the final, AI-annotated alert stream -- and
+writes it into a `fraud_cases` table in the same Postgres database, using
+`UPSERT` semantics keyed on `transaction_id`. This runs completely
+independently of the dashboard: even with the Spring Boot app closed, every
+flagged transaction still lands in Postgres.
 
 The full pipeline runs across **8 topics and 43 partitions** on a single
 Confluent Cloud cluster:
@@ -149,11 +170,11 @@ topic:
    tier to every transaction.
 2. **`velocity_geo_transactions`** -- computes two signals directly on the
    append-only transaction stream using windowed SQL:
-    - `COUNT(*) OVER (PARTITION BY card_id ORDER BY event_time RANGE BETWEEN
+   - `COUNT(*) OVER (PARTITION BY card_id ORDER BY event_time RANGE BETWEEN
      INTERVAL '2' MINUTE PRECEDING AND CURRENT ROW)` for velocity
-    - A haversine great-circle distance calculation between a card's
-      consecutive transaction locations, divided by elapsed time, to get an
-      implied travel speed in km/h
+   - A haversine great-circle distance calculation between a card's
+     consecutive transaction locations, divided by elapsed time, to get an
+     implied travel speed in km/h
 3. **`scored_transactions`** -- joins in the amount-anomaly signal
    (transaction amount divided by the customer's historical average) and
    combines all three signals into a single 0-100 `risk_score` with a
@@ -255,7 +276,7 @@ src/main/resources/
   static/         dashboard.html (+ theme variants)
   application.properties
 flink-sql/        every Flink SQL statement, numbered in run order
-connectors/       Postgres seed script + connector setup notes
+connectors/       Postgres seed scripts (source + sink) + connector setup notes
 docs/             setup notes, screenshots
 ```
 
@@ -276,6 +297,11 @@ docs/             setup notes, screenshots
    `mvn spring-boot:run`
 5. **Flink SQL**: run every file in `flink-sql/`, in numeric order, in a
    Confluent Cloud Flink SQL workspace (one statement per cell)
+6. **Postgres Sink Connector**: run `connectors/postgres_sink_setup.sql`
+   to create the `fraud_cases` table and a dedicated write-only role, then
+   configure the connector in Confluent Cloud (Input format: AVRO, Insert
+   mode: UPSERT, PK fields: `transaction_id`, Table name format:
+   `fraud_cases`) reading from `fraud_alerts_explained`
 
 ## Running the demo
 
@@ -290,7 +316,13 @@ curl -X POST http://localhost:8080/api/demo/inject/geo
 ```
 
 Expect roughly 5-15 seconds from trigger to dashboard -- most of that is
-the live LLM call generating the explanation.
+the live LLM call generating the explanation. Alerts land in the
+`fraud_cases` Postgres table on a similar timeline, independent of the
+dashboard:
+
+```sql
+SELECT * FROM fraud_cases ORDER BY inserted_at DESC LIMIT 5;
+```
 
 ## Screenshots
 
